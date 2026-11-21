@@ -159,6 +159,39 @@ table.lib{width:100%;border-collapse:collapse}
 .lib td.num{font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
 .lib input{width:100%;font-weight:800}
 
+/* instrument pictures */
+.art svg{display:block;width:100%;height:100%}
+.art [data-r],.art [data-b],.art [data-bar],.art [data-actor],.art [data-s],.art [data-v]{transform-box:fill-box;transform-origin:center}
+.art [data-play]{cursor:pointer}
+.stage{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line2);background:color-mix(in srgb,var(--c) 6%,white)}
+.stage .art{height:90px}
+.stage p{margin:0;font-size:12.5px;color:var(--muted)}
+.stage p b{color:var(--text)}
+.band{display:flex;gap:6px;overflow-x:auto;padding:6px 12px;border-bottom:1px solid var(--line2);background:var(--surface)}
+.band-item{flex:none;width:92px;text-align:center;font-size:11px;font-weight:800;color:var(--muted);border-radius:8px;padding:3px;cursor:pointer;border:1.5px solid transparent}
+.band-item:hover{border-color:var(--line)}
+.band-item .art{height:52px}
+.band-item.muted{opacity:.35}
+.lib .sub{font-size:12px;color:var(--muted);margin-top:2px}
+.lib tr.child td:first-child{padding-left:30px}
+.lib tr.child .name::before{content:"↳ ";color:var(--muted)}
+.banner{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 12px 0;padding:10px 12px;border-radius:10px;background:#fff6e5;border:1px solid #f3d7a2}
+#baseInfo{font-size:12px;color:var(--muted);max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#userBox{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
+/* sign-in screen */
+.auth{position:fixed;inset:0;z-index:80;background:linear-gradient(160deg,#e2f2ef,#eef1f6 55%);display:grid;place-items:center;padding:16px;overflow:auto}
+.auth-box{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:24px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(20,30,50,.12)}
+.auth-box h3{font-family:var(--font-display);font-size:22px;font-weight:900;margin:14px 0 4px}
+.auth-box form{display:grid;gap:10px;margin-top:14px}
+.auth-box label{display:grid;gap:4px;font-weight:800;font-size:13px}
+.auth-box input{background:var(--surface);border:1.5px solid var(--line);border-radius:9px;padding:9px 10px;font-weight:600}
+.auth-box .seg{width:100%;margin-top:14px}
+.auth-box .seg button{flex:1;padding:7px}
+.auth-box .err{color:var(--danger);font-weight:700;font-size:13px;margin:0;min-height:1em}
+.auth-box .ok{color:var(--accent)}
+.auth-box .linkbtn{background:none;border:0;color:var(--accent);padding:2px;justify-self:start;font-size:13px}
+.auth-art{display:flex;gap:6px;justify-content:center}
+.auth-art .art{width:70px;height:42px}
 /* modal + toast */
 .modal{position:fixed;inset:0;background:rgba(20,26,38,.45);display:grid;place-items:center;z-index:50;padding:16px}
 .modal-box{background:var(--surface);border-radius:16px;padding:20px;max-width:560px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25);max-height:90vh;overflow:auto}
@@ -199,12 +232,15 @@ table.lib{width:100%;border-collapse:collapse}
     <button id="tabCreate" class="on" role="tab" aria-selected="true">Create</button>
     <button id="tabLib" role="tab" aria-selected="false">My songs <span class="n" id="libCount">0</span></button>
   </div>
-  <input id="title" type="text" maxlength="50" aria-label="Song name">
+  <input id="title" type="text" maxlength="60" aria-label="Song name">
+  <span id="baseInfo"></span>
+  <button id="copyBtn" title="Make a copy of this song and edit the copy. The original stays as it is.">Make a copy to edit</button>
   <span id="saved"></span>
   <div class="spacer"></div>
   <button id="helpBtn" class="ghost">How it works</button>
   <button id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>
   <button id="mp3Btn" class="primary">Download MP3</button>
+  <span id="userBox" hidden><span id="userEmail"></span><button id="signOutBtn">Sign out</button></span>
 </header>
 
 <!-- ============ CREATE ============ -->
@@ -216,6 +252,7 @@ table.lib{width:100%;border-collapse:collapse}
   <div class="work">
     <section class="card sounds" id="soundsCard" aria-label="Sounds">
       <div class="card-h"><h2 id="soundsTitle">Sounds</h2><span class="grow"></span><span class="muted" id="soundsCount" style="font-size:12px"></span></div>
+      <div class="stage" id="stage"></div>
       <div class="filters" id="filters">
         <button data-f="all" class="on">All</button><button data-f="tune">Melodies</button><button data-f="loop">Backing</button><button data-f="hit">One-time</button>
       </div>
@@ -232,8 +269,10 @@ table.lib{width:100%;border-collapse:collapse}
           <span id="time">0:00 / 0:00</span>
           <input type="range" id="seek" class="seek" min="0" max="100" step="0.25" value="0" aria-label="Song position">
           <label class="tgl" for="loop"><input type="checkbox" id="loop"> Repeat</label>
+          <label class="tgl" for="bandTgl"><input type="checkbox" id="bandTgl" checked> Show band</label>
           <span class="zoom">Zoom <button id="zoomOut" aria-label="Zoom out">−</button><button id="zoomIn" aria-label="Zoom in">+</button></span>
         </div>
+        <div class="band" id="band"></div>
         <div class="tl" id="tl"></div>
       </section>
 
@@ -265,6 +304,7 @@ table.lib{width:100%;border-collapse:collapse}
       <span class="muted" style="font-size:12.5px">Songs are saved automatically in this browser. Use <b>Save file</b> to keep a copy on your computer.</span>
       <input type="file" id="importFile" accept=".json,application/json" hidden>
     </div>
+    <div id="importBanner"></div>
     <div class="libwrap">
       <table class="lib">
         <thead><tr><th>Song</th><th class="hide-s">Style</th><th>Length</th><th class="hide-s">Instruments</th><th class="hide-s">Last changed</th><th style="text-align:right">Actions</th></tr></thead>
@@ -295,11 +335,49 @@ table.lib{width:100%;border-collapse:collapse}
     <div class="modal-actions" style="margin-top:16px"><button id="helpClose" class="primary">Got it</button></div>
   </div>
 </div>
+<div class="auth" id="authScreen" hidden>
+  <div class="auth-box">
+    <div class="brand"><span class="logo"><i></i><i></i><i></i><i></i></span>Track Maker</div>
+    <div class="auth-art" id="authArt"></div>
+    <h3 id="authTitle">Sign in</h3>
+    <div class="muted" style="font-size:13.5px">Make your own music with 20 instruments. Your songs are private to your account and open on any device.</div>
+    <div class="seg" id="authTabs"><button type="button" data-mode="in" class="on">Sign in</button><button type="button" data-mode="up">Create account</button></div>
+    <form id="authForm" novalidate>
+      <label for="authEmail">Email<input type="email" id="authEmail" autocomplete="email" required></label>
+      <label for="authPass">Password<input type="password" id="authPass" autocomplete="current-password" required minlength="6"></label>
+      <label for="authPass2" id="pass2Wrap" hidden>Type the password again<input type="password" id="authPass2" autocomplete="new-password"></label>
+      <p class="err" id="authMsg" role="alert"></p>
+      <button class="primary" id="authGo" type="submit" style="padding:9px">Sign in</button>
+      <button type="button" class="linkbtn" id="forgotBtn">Forgot your password?</button>
+    </form>
+  </div>
+</div>
 <div id="toast" role="status"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
 <script>
 'use strict';
+/* =====================================================================
+   ACCOUNT SET-UP
+   To turn on sign-in with email and password, paste your Firebase web
+   app settings below (see the set-up steps). Leave it as null to run the
+   app without accounts: songs are then kept in this browser only.
+   ===================================================================== */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDzm8d1Znld_p7jTrDH6MiKKpKqcdQIYUE",
+  authDomain: "my-music-track-creator.firebaseapp.com",
+  projectId: "my-music-track-creator",
+  storageBucket: "my-music-track-creator.firebasestorage.app",
+  messagingSenderId: "182405240433",
+  appId: "1:182405240433:web:28d67b1e92c77d14466dd0"
+};
+/* Example:
+const FIREBASE_CONFIG = {
+  apiKey: "AIza...", authDomain: "your-project.firebaseapp.com", projectId: "your-project",
+  storageBucket: "your-project.appspot.com", messagingSenderId: "123456789", appId: "1:123456789:web:abc123"
+};
+*/
+const CLOUD = !!(FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey);
 /* =====================================================================
    1. DSP HELPERS
    ===================================================================== */
@@ -622,7 +700,11 @@ const E808KIT = {K:(c,o,t,v)=>kick(c,o,t,v,{f0:120,f1:42,tau:.4,click:.2,drive:2
 const TABLAKIT = {Dha:(c,o,t,v)=>{tNa(c,o,t,v); bayan(c,o,t,v);}, Dhin:(c,o,t,v)=>{tTin(c,o,t,v); bayan(c,o,t,v);},
   Na:tNa, Tin:tTin, Tun:tTun, Te:tTe, Ge:(c,o,t,v)=>bayan(c,o,t,v), Ke:tKe};
 const DHOLKIT = {Ge:dGe, Na:dNa, Ta:dTa, Dha:(c,o,t,v)=>{dGe(c,o,t,v); dNa(c,o,t,v);}};
-const PERCKIT = {CL:clap, SN:snap, SH:shaker, TB:tamb, CB:cowbell, W:whoosh, RC:revCym, POP:pop, AP:applause, C:crash};
+function triSnd(c,o,t,v){ const g = G(c); perc(g,t,v*.12,.6,.001); osc(c,'sine',3800,t,t+3).connect(g); osc(c,'sine',5650,t,t+3).connect(g); g.connect(o); }
+function woodblock(c,o,t,v){ const g = G(c); perc(g,t,v*.45,.025,.001); osc(c,'sine',980,t,t+.3).connect(g); g.connect(o); }
+function bongo(c,o,t,v,f){ const s = osc(c,'sine',f*1.12,t,t+.5); s.frequency.exponentialRampToValueAtTime(f,t+.04); const g = G(c); perc(g,t,v*.5,.07); s.connect(g).connect(o); }
+const PERCKIT = {CL:clap, SN:snap, SH:shaker, TB:tamb, CB:cowbell, W:whoosh, RC:revCym, POP:pop, AP:applause, C:crash, TR:triSnd, WB:woodblock,
+  BH:(c,o,t,v)=>bongo(c,o,t,v,330), BL:(c,o,t,v)=>bongo(c,o,t,v,220)};
 const INST = {
   piano:    {name:'Piano',            cat:'Keys',    color:'#3567d6', sound:pPiano,     tuneShift:0,  rev:.25, gain:1},
   epiano:   {name:'Electric piano',   cat:'Keys',    color:'#5b86e5', sound:pEPiano,    tuneShift:0,  rev:.25, gain:1},
@@ -706,6 +788,20 @@ const GEN = {
   bOct:   ({ch,m})=>seqNotes(m,.5,[ch.root,ch.root+12],.4,.65),
   bSync:  ({ch,m})=>(m===4?[0,1.5,3]:[0,1.5]).map(b=>N(b,ch.root,.9,.75)),
   bEnd:   ({ch,m})=>[N(0,ch.root,m*2,.8)],
+  bArp:   ({ch,m})=>[ch.root, ch.tri[1]-12, ch.tri[2]-12, ch.root+12].slice(0,m).map((p,b)=>N(b,p,.9,.7)),
+  bGallop:({ch,m})=>{ const o=[]; for(let b=0;b<m;b++) [0,.5,.75].forEach((x,j)=>o.push(N(b+x,ch.root,.22,j?.5:.75))); return o; },
+  bShuffle:({ch,m})=>{ const o=[]; for(let b=0;b<m;b++){ o.push(N(b,ch.root,.55,.75)); o.push(N(b+2/3,ch.root+12,.3,.45)); } return o; },
+  alberti:({ch,m})=>seqNotes(m,.5,[ch.root+12, ch.tri[2], ch.tri[1], ch.tri[2]],.5,.48),
+  arpDown:({ch,m})=>seqNotes(m,.5,[3,2,1,0].map(k=>arp(ch)[k]+12),.8,.48),
+  arp3:   ({ch,m})=>{ const s=[0,1,2].map(k=>arp(ch)[k]+12), o=[]; for(let k=0;k<m*3;k++) o.push(N(k/3, s[k%3], .45, k%3?.36:.48)); return o; },
+  chordRoll:({ch,m})=>[ch.root+12, ...ch.tri, ch.tri[0]+12].map((p,i)=>N(i*.14,p,m-i*.14,.5)),
+  gallop: ({ch,m})=>{ const o=[]; for(let b=0;b<m;b++) [0,.5,.75].forEach((x,j)=>o.push(...chordAt(b+x,ch,.22,j?.38:.52))); return o; },
+  shuffle:({ch,m})=>{ const o=[]; for(let b=0;b<m;b++){ o.push(...chordAt(b,ch,.5,.5)); o.push(...chordAt(b+2/3,ch,.28,.36)); } return o; },
+  counter2:({ch,m})=>[N(.5,ch.tri[1]+12,1,.45), N(m===4?2:1.5, ch.tri[2]+12, m===4?1.5:1.2, .5)],
+  repeat16:({ch,m})=>seqNotes(m,.25,[ch.tri[2]+12],.24,.4),
+  riser:  ({ch,m,st})=>{ const n=m*4, o=[]; for(let k=0;k<n;k++) o.push(N(k*.25, scaleUp(ch.root+12,k,st.scale), .3, .3+.5*k/n)); return o; },
+  gStrum: ({ch,m})=>{ const o=[]; for(let b=0;b<m;b++){ o.push(...strum(b,ch,.4,.55)); o.push(...strum(b+.5,ch,.2,.35,true)); o.push(...strum(b+.75,ch,.2,.35,true)); } return o; },
+  sStrum: ({ch,m})=>{ const o=[]; for(let b=0;b<m;b++){ o.push(...strum(b,ch,.55,.55)); o.push(...strum(b+2/3,ch,.3,.35,true)); } return o; },
   b808:   ({ch,m})=>(m===4?[0,2.5]:[0,1.5]).map(b=>N(b,ch.root-12,1.4,.85)),
 };
 function drumVar(ev, m, vari){
@@ -725,6 +821,15 @@ const DG = {
   fill:  ({m})=>{ const e=[]; for(let k=0;k<m*4;k++){ const b=k/4; if(k>=(m-1)*4) e.push(K(b, k%4<2?'HT':'LT', .7)); else e.push(K(b,'S',.25+.6*k/(m*4))); } return e; },
   tomfill:({m})=>{ const rows=['S','S','HT','HT','HT','LT','LT','LT']; const e=[]; for(let k=0;k<m*2;k++) e.push(K(k/2, rows[Math.floor(k*8/(m*2))], .7)); return e; },
   crash: ()=>[K(0,'C',.85),K(0,'K',.9)],
+  shuffleB:({m,vari})=>{ const e = m===4 ? [K(0,'K',.9),K(2,'K',.8),K(1,'S',.7),K(3,'S',.7)] : [K(0,'K',.9),K(1,'S',.4),K(2,'S',.4)];
+    for(let b=0;b<m;b++){ e.push(K(b,'H',.45)); e.push(K(b+2/3,'H',.3)); } return drumVar(e,m,vari); },
+  ballad:({m,vari})=>drumVar((m===4?[K(0,'K',.75),K(2.5,'K',.55),K(1,'S',.45),K(3,'S',.45)]:[K(0,'K',.75),K(2,'R',.4)]).concat(hats(m,.5,.22)),m,vari),
+  reggae:({m,vari})=>drumVar((m===4?[K(2,'K',.85),K(2,'R',.6)]:[K(1.5,'K',.8),K(1.5,'R',.55)]).concat(hats(m,.5,.3)),m,vari),
+  funk:({m,vari})=>drumVar((m===4?[K(0,'K',.9),K(1.5,'K',.6),K(2.5,'K',.75),K(1,'S',.8),K(3,'S',.8),K(1.75,'S',.22),K(3.25,'S',.22)]:[K(0,'K',.9),K(1.5,'K',.6),K(1,'S',.75),K(2,'S',.75)]).concat(hats(m,.25,.28)),m,vari),
+  snareRoll:({m})=>{ const e=[]; for(let k=0;k<m*4;k++) e.push(K(k/4,'S',.42)); return e; },
+  eBreak:({m,vari})=>drumVar((m===4?[K(0,'K',.9),K(1.75,'K',.65),K(2.5,'K',.75),K(1,'S',.8),K(3,'S',.8)]:[K(0,'K',.9),K(1.5,'K',.6),K(1,'S',.75)]).concat(hats(m,.5,.32)),m,vari),
+  ePulse:({m,vari})=>drumVar(hats(m,.5,.7,'K').concat(m===4?[K(1,'CL',.7),K(3,'CL',.7)]:[K(1,'CL',.6),K(2,'CL',.6)]),m,vari),
+  eSnare:({m})=>{ const e=[]; for(let k=0;k<m*4;k++) e.push(K(k/4,'S',.15+.6*k/(m*4))); return e; },
   // electronic
   eBasic:({m,vari})=>drumVar((m===4?[K(0,'K',.9),K(2.5,'K',.75),K(1,'CL',.7),K(3,'CL',.7)]:[K(0,'K',.9),K(1.5,'K',.6),K(2,'CL',.7)]).concat(hats(m,.5,.35)),m,vari),
   eDance:({m,vari})=>drumVar(Array.from({length:m},(_,b)=>K(b,'K',.9)).concat(m===4?[K(1,'CL',.7),K(3,'CL',.7)]:[K(1,'CL',.6),K(2,'CL',.6)],hats(m,1,.35,'OH').map(e=>Object.assign(e,{b:e.b+.5}))),m,vari),
@@ -749,6 +854,10 @@ const TG = {
   dGroove:({m,vari})=>{ let e = m===4 ? [K(0,'Ge',.85),K(.75,'Ta',.5),K(1,'Ge',.6),K(1.5,'Na',.6),K(2,'Ge',.8),K(2.75,'Ta',.5),K(3,'Ge',.6),K(3.5,'Na',.6)]
                                     : [K(0,'Ge',.85),K(.5,'Na',.5),K(1,'Ta',.55),K(1.5,'Ge',.6),K(2,'Na',.6)];
     if(vari==='busy') for(let k=0;k<m*2;k++) e.push(K(k/2+.25,'Ta',.3)); if(vari==='light') e=e.map(x=>Object.assign(x,{v:x.v*.6})); return e; },
+  bhajan:({m})=> m===4 ? [K(0,'Dha',.9),K(1,'Dhin',.7),K(1.5,'Na',.55),K(2,'Dha',.8),K(3,'Tin',.65),K(3.5,'Na',.55)] : [K(0,'Dha',.9),K(1,'Dhin',.7),K(2,'Na',.6)],
+  rela:({m})=>{ const e=[], b=['Te','Te','Ke','Te']; for(let k=0;k<(m-1)*4;k++) e.push(K(k/4,b[k%4],.35+.35*k/((m-1)*4))); e.push(K(m-1,'Dha',1)); return e; },
+  dGarba:({m})=> m===4 ? [K(0,'Ge',.85),K(1,'Na',.55),K(1.5,'Ta',.45),K(2,'Ge',.75),K(3,'Na',.55),K(3.5,'Ta',.45)] : [K(0,'Ge',.85),K(1,'Na',.55),K(1.5,'Ta',.45),K(2,'Na',.55)],
+  dQawwali:({m})=> m===4 ? [K(0,'Dha',.85),K(1,'Ta',.5),K(1.5,'Na',.5),K(2,'Ge',.75),K(3,'Ta',.55),K(3.5,'Na',.5)] : [K(0,'Dha',.85),K(1,'Ta',.5),K(2,'Na',.55)],
   dSimple:({m})=>{ const e=[K(0,'Ge',.85)]; for(let b=1;b<m;b++) e.push(K(b,'Na',.55)); return e; },
   dEnd:({m})=>{ const e=[]; for(let k=0;k<(m-1)*4;k++) e.push(K(k/4, k%2?'Ta':'Na', .35+.4*k/((m-1)*4))); e.push(K(m-1,'Dha',1)); return e; },
 };
@@ -787,19 +896,31 @@ const REC = {
   sparkle:['Sparkles','Twinkly notes here and there. Magical.'],
   chime:['One chime per bar','A single ringing note at the start of every bar.'],
   musicbox:['Music box','Gentle tinkling notes, like a music box.'],
+  alberti:['Alberti pattern','Low-high-middle-high notes, the classic piano pattern.'],
+  arpDown:['Rolling notes (down)','Chord notes falling from high to low.'],
+  arp3:['Triplet roll','Three notes per beat. Flowing and graceful.'],
+  chordRoll:['Slow rolled chord','A chord played gently, one note at a time.'],
+  gallop:['Galloping chords','Da-da-dum rhythm, like a horse galloping.'],
+  shuffle:['Swing chords','A bouncy, swinging long-short rhythm.'],
+  counter2:['Second answer line','Another gentle line between the melody notes.'],
+  repeat16:['Tremolo picking','One note picked very fast, like a mandolin.'],
   trill:['Trill and hold','A quick wobble between two notes, then a long note.'],
 };
-const HREC = { runup:['Run up','A quick run of notes upward. Use it just before a new part.'], end:['Big ending','One big final chord to finish your song.'], endNote:['Ending note','One long final note to finish.'] };
+const HREC = { riser:['Rising notes','Notes climbing up through a whole bar. Builds excitement.'], runup:['Run up','A quick run of notes upward. Use it just before a new part.'], end:['Big ending','One big final chord to finish your song.'], endNote:['Ending note','One long final note to finish.'] };
 function melodic(inst, keys, sound){
   addEl(inst,'tune','tune',null,null,null,{sound});
   addEl(inst,'harmony','tune',null,null,null,{sound, harmony:true});
+  addEl(inst,'easy','tune',null,null,null,{sound, easy:true});
+  addEl(inst,'echo','tune',null,null,null,{sound, echo:true});
   keys.forEach(k=>{ if(REC[k]) addEl(inst,k,'loop',REC[k][0],REC[k][1],GEN[k],{sound}); else addEl(inst,k,'hit',HREC[k][0],HREC[k][1],GEN[k],{sound}); });
 }
-melodic('piano',['long','bouncy','oompah','offbeat','sync','rollUp','rollUD','fast','lowoct','answer','runup','end']);
-melodic('epiano',['long','offbeat','sync','rollUD','pulse','answer','end']);
-melodic('organ',['long','bouncy','offbeat','lowoct','drone','end']);
-melodic('harmonium',['long','drone','bouncy','offbeat','answer','end']);
-melodic('guitar',['end']);
+melodic('piano',['long','bouncy','oompah','offbeat','sync','rollUp','rollUD','arpDown','arp3','alberti','chordRoll','gallop','shuffle','fast','lowoct','answer','counter2','riser','runup','end']);
+melodic('epiano',['long','offbeat','sync','rollUD','arp3','chordRoll','gallop','shuffle','pulse','answer','counter2','end']);
+melodic('organ',['long','bouncy','offbeat','gallop','shuffle','chordRoll','arp3','pulse','lowoct','drone','end']);
+melodic('harmonium',['long','drone','bouncy','offbeat','shuffle','rollUD','arp3','pulse','answer','counter2','end']);
+melodic('guitar',['chordRoll','arp3','alberti','repeat16','end']);
+addEl('guitar','gStrum','loop','Galloping strum','Da-da-dum strumming. Energetic.',GEN.gStrum);
+addEl('guitar','sStrum','loop','Swing strum','A long-short bouncy strum.',GEN.sStrum);
 addEl('guitar','strum','loop','Strumming','Strums the chord on every beat, like a campfire song.',GEN.strum);
 addEl('guitar','downup','loop','Down-up strumming','Strums down and up. Fuller and more rhythmic.',GEN.downup);
 addEl('guitar','onestrum','loop','One strum per bar','A single strum that rings out. Very simple.',GEN.onestrum);
@@ -807,22 +928,22 @@ addEl('guitar','boom','loop','Boom-chick','A bass note, then a quick strum. Coun
 addEl('guitar','reggae','loop','Off-beat strums','Short strums between the beats. Light and bouncy.',GEN.reggae);
 addEl('guitar','pick','loop','Gentle picking','Plucks single strings one by one. Soft and warm.',GEN.pick);
 addEl('guitar','fastpick','loop','Fast picking','Quick finger-picked notes. Flowing and busy.',GEN.fastpick);
-melodic('violin',['long','low','answer','single','end']);
+melodic('violin',['long','low','chordRoll','rollUD','arp3','pulse','answer','counter2','single','end']);
 addEl('violin','pizz','loop','Pizzicato (plucked)','Short plucked string notes. Playful.',GEN.pizz,{sound:pPizz});
 addEl('violin','tremolo','loop','Tremolo','Fast shivering strings. Exciting, like a film score.',GEN.tremolo,{sound:pStringsFast});
-melodic('sitar',['drone','rollUD','fast','end']);
+melodic('sitar',['drone','rollUD','arpDown','arp3','fast','repeat16','pulse','counter2','riser','end']);
 addEl('sitar','pluck','loop','Sitar plucks','A few ringing plucks each bar.',GEN.pluck);
 addEl('sitar','chikari','loop','Chikari strokes','Light high strokes between the beats, like a real sitar player.',GEN.chikari);
 addEl('sitar','taan','hit','Fast taan','A quick run up and back down the scale.',GEN.taan);
-melodic('santoor',['fast','rollUD','sparkle','single','end']);
-melodic('flute',['single','rollUD','answer','trill','runup','endNote']);
+melodic('santoor',['fast','rollUD','arpDown','arp3','alberti','repeat16','sparkle','single','counter2','riser','end']);
+melodic('flute',['single','rollUD','arpDown','arp3','sparkle','pulse','answer','counter2','trill','riser','runup','endNote']);
 addEl('flute','birds','loop','Bird whistles','Little high chirps here and there.',GEN.birds);
-melodic('bansuri',['single','rollUD','answer','trill','endNote']);
-melodic('trumpet',['single','answer','endNote']);
+melodic('bansuri',['single','rollUD','arpDown','arp3','sparkle','pulse','answer','counter2','trill','endNote']);
+melodic('trumpet',['single','offbeat','sync','gallop','shuffle','rollUp','answer','counter2','endNote']);
 addEl('trumpet','fanfare','loop','Fanfare','Ta-ta-ta-taaa! A royal announcement.',GEN.fanfare);
 addEl('trumpet','stabs','loop','Brass hits','Short punchy chords on catchy beats.',GEN.stabs);
-melodic('bells',['sparkle','chime','musicbox','rollUD','end']);
-melodic('marimba',['rollUD','bouncy','offbeat','fast','answer']);
+melodic('bells',['sparkle','chime','musicbox','rollUD','arpDown','arp3','fast','pulse','counter2','riser','end']);
+melodic('marimba',['rollUD','arpDown','arp3','alberti','bouncy','offbeat','sync','gallop','sparkle','fast','answer','riser']);
 melodic('synth',[], pLead);
 addEl('synth','pad','loop','Dreamy pad','A soft cloud of sound that fills the background.',GEN.long,{sound:pPad});
 addEl('synth','pluckp','loop','Plucky pattern','Short electronic notes in a catchy pattern.',GEN.rollUD,{sound:pPluck});
@@ -830,10 +951,19 @@ addEl('synth','arp','loop','Fast arpeggio','Very quick electronic notes, like da
 addEl('synth','sbass','loop','Synth bass','A buzzy bass line on every half beat.',GEN.bOct,{sound:pSynthBass});
 addEl('synth','b808','loop','808 deep bass','A very deep booming bass, like hip-hop.',GEN.b808,{sound:p808});
 addEl('synth','end','hit','Pad ending','A big soft chord to finish.',GEN.end,{sound:pPad});
+addEl('synth','padRoll','loop','Slow pad roll','Soft pad notes rolling in one by one.',GEN.chordRoll,{sound:pPad});
+addEl('synth','gallopP','loop','Galloping synth','Da-da-dum electronic chords.',GEN.gallop,{sound:pPluck});
+addEl('synth','arpDownP','loop','Falling arpeggio','Electronic notes tumbling down.',GEN.arpDown,{sound:pPluck});
+addEl('synth','arp3P','loop','Triplet arpeggio','Three quick electronic notes per beat.',GEN.arp3,{sound:pPluck});
+addEl('synth','stabL','loop','Lead stabs','Short bright synth chords on catchy beats.',GEN.sync,{sound:pLead});
+addEl('synth','riserP','hit','Synth riser','Electronic notes climbing up. Builds excitement.',GEN.riser,{sound:pPluck});
 [['bRoot','Steady low notes','One deep note per bar. Makes the song feel full.'],['bBounce','Bouncy bass','Low notes on every beat with little jumps up.'],
  ['bWalk','Walking bass','Steps through the chord notes, one per beat.'],['bOff','Off-beat bass','Bass notes between the beats. Funky.'],
  ['bOct','Octave pulse','Jumps between low and high, on every half beat.'],['bSync','Syncopated bass','Bass on catchy, off-centre beats.']]
   .forEach(([k,n,d])=>addEl('bass',k,'loop',n,d,GEN[k]));
+addEl('bass','bArp','loop','Chord-note bass','Walks through the notes of each chord.',GEN.bArp);
+addEl('bass','bGallop','loop','Galloping bass','Da-da-dum on every beat. Driving.',GEN.bGallop);
+addEl('bass','bShuffle','loop','Swing bass','A bouncy long-short bass line.',GEN.bShuffle);
 addEl('bass','bEnd','hit','Ending note','One long low note to finish.',GEN.bEnd);
 // rhythm
 const kitEl = (inst,key,type,name,desc,gen,vars)=>addEl(inst,key,type,name,desc,gen,{vars:vars||null});
@@ -847,22 +977,35 @@ kitEl('drums','half','loop','Slow groove','A relaxed, half-speed beat.',DG.half,
 kitEl('drums','fill','hit','Drum roll','A roll that builds up. Use it just before a new part.',DG.fill);
 kitEl('drums','tomfill','hit','Tom fill','Drums tumbling down the toms.',DG.tomfill);
 kitEl('drums','crash','hit','Cymbal crash','One big crash, for the start of a new part or the end.',DG.crash);
+kitEl('drums','shuffleB','loop','Shuffle beat','A swinging, bouncy groove.',DG.shuffleB,DRUM);
+kitEl('drums','ballad','loop','Ballad beat','Gentle drums for slow, emotional songs.',DG.ballad,DRUM);
+kitEl('drums','reggae','loop','Reggae beat','Laid-back, with the big hit in the middle of the bar.',DG.reggae,DRUM);
+kitEl('drums','funk','loop','Funky beat','Busy hi-hats and a groovy kick.',DG.funk,DRUM);
+kitEl('drums','snareRoll','hit','Snare roll','A steady snare roll through one bar.',DG.snareRoll);
 kitEl('edrums','eBasic','loop','Electronic beat','A modern beat with claps.',DG.eBasic,DRUM);
 kitEl('edrums','eDance','loop','Dance beat','Four-on-the-floor kick, made for dancing.',DG.eDance,DRUM);
 kitEl('edrums','eTrap','loop','Hip-hop beat','Fast hi-hats and a deep kick.',DG.eTrap,DRUM);
 kitEl('edrums','eCow','loop','Cowbell groove','A fun cowbell rhythm.',DG.eCow);
 kitEl('edrums','eChill','loop','Chill beat','A slow, relaxed electronic beat.',DG.half,DRUM);
 kitEl('edrums','eCrash','hit','Big hit','A deep kick with a crash.',DG.crash);
+kitEl('edrums','eBreak','loop','Breakbeat','A choppy, energetic electronic beat.',DG.eBreak,DRUM);
+kitEl('edrums','ePulse','loop','Pulsing kick','Kick on every half beat with claps.',DG.ePulse,DRUM);
+kitEl('edrums','eSnare','hit','Snare build-up','A snare roll that grows louder.',DG.eSnare);
 kitEl('edrums','eRoll','hit','Clap build-up','Claps that speed up and get louder.',DG.eRoll);
 kitEl('tabla','theka','loop','Basic tabla rhythm','The classic pattern (Keherwa, or Dadra in 3 beats).',TG.theka,DRUM);
 kitEl('tabla','lively','loop','Lively tabla','Busier tabla with extra quick strokes.',TG.lively,DRUM);
 kitEl('tabla','slow','loop','Slow tabla','Few, deep strokes. Calm and spacious.',TG.slow);
 kitEl('tabla','teental','loop','Teental (16 beats)','The famous 16-beat cycle (Dadra in 3-beat styles).',TG.teental,DRUM);
+kitEl('tabla','bhajan','loop','Bhajan tabla','A simple devotional rhythm.',TG.bhajan);
+kitEl('tabla','fastTeental','loop','Fast Teental','Teental with extra quick strokes.',a=>TG.teental(Object.assign({},a,{vari:a.vari==='light'?'light':'busy'})),DRUM);
+kitEl('tabla','rela','hit','Tabla rela','A very fast run of strokes ending on a big Dha.',TG.rela);
 kitEl('tabla','tihai','hit','Tabla ending (tihai)','A rhythmic flourish to finish a section.',TG.tihai);
 kitEl('dholak','dGroove','loop','Dholak groove','The bouncy wedding and festival rhythm.',TG.dGroove,DRUM);
 kitEl('dholak','dSimple','loop','Simple dholak','A deep beat with light taps.',TG.dSimple);
 kitEl('dholak','dFast','loop','Bhangra dholak','Fast and energetic, with extra quick taps.',a=>TG.dGroove(Object.assign({},a,{vari:a.vari==='light'?'light':'busy'})),DRUM);
 kitEl('dholak','dHalf','loop','Dholak with claps feel','Deep dholak on the main beats and light taps between.',({m})=>{ const e=[K(0,'Dha',.85)]; for(let b=1;b<m;b++){ e.push(K(b,'Ta',.5)); } for(let b=0;b<m;b++) e.push(K(b+.5,'Na',.35)); return e; });
+kitEl('dholak','dGarba','loop','Garba rhythm','The swinging rhythm of a garba dance.',TG.dGarba);
+kitEl('dholak','dQawwali','loop','Qawwali dholak','A strong, clap-along devotional rhythm.',TG.dQawwali);
 kitEl('dholak','dEnd','hit','Dholak roll','A fast roll that ends with a big hit.',TG.dEnd);
 kitEl('perc','claps','loop','Clap along','Hand claps on the off-beats, like a happy crowd.',PG.claps);
 kitEl('perc','snaps','loop','Finger snaps','Cool finger snaps on the off-beats.',PG.snaps);
@@ -873,9 +1016,13 @@ kitEl('perc','applause','hit','Applause','A crowd clapping. Lovely at the very e
 kitEl('perc','pop','hit','Party popper','Pop! With a little burst of confetti.',PG.pop);
 kitEl('perc','whoosh','hit','Whoosh build-up','A rising whoosh that leads into the next bar.',PG.whoosh);
 kitEl('perc','rev','hit','Cymbal swell','A cymbal that grows louder into the next bar.',PG.rev);
+kitEl('perc','clapsAll','loop','Clap on every beat','Everyone clapping along on each beat.',({m})=>hats(m,1,.65,'CL'));
+kitEl('perc','triangle','loop','Triangle','A bright ting at the start of each bar.',({m})=>[K(0,'TR',.7)].concat(m===4?[K(2,'TR',.45)]:[]));
+kitEl('perc','woodblock','loop','Woodblock','Clip-clop wooden knocks on the half beats.',({m})=>hats(m,.5,.6,'WB'));
+kitEl('perc','bongos','loop','Bongos','Two little hand drums in a happy pattern.',({m})=> m===4 ? [K(0,'BL',.7),K(.5,'BH',.5),K(1,'BH',.6),K(1.75,'BH',.45),K(2,'BL',.7),K(2.5,'BH',.5),K(3,'BH',.6),K(3.5,'BL',.5)] : [K(0,'BL',.7),K(.5,'BH',.5),K(1,'BH',.6),K(2,'BH',.6),K(2.5,'BL',.5)]);
 const EL = Object.fromEntries(ELEMENTS.map(e=>[e.id,e]));
-const elName = e => e.type==='tune' ? (e.harmony ? 'Harmony: '+STY().tuneName : 'Melody: '+STY().tuneName) : e.name;
-const elDesc = e => e.type==='tune' ? (e.harmony ? 'The same tune a little lower. Add it under the melody so they play together.' : `Plays the ${STY().tuneName.toLowerCase()} (${STY().prog.length} bars).`) : e.desc;
+const elName = e => e.type==='tune' ? (e.harmony ? 'Harmony: ' : e.easy ? 'Easy melody: ' : e.echo ? 'Echo melody: ' : 'Melody: ')+STY().tuneName : e.name;
+const elDesc = e => e.type==='tune' ? (e.harmony ? 'The same tune a little lower. Add it under the melody so they play together.' : e.easy ? 'Only the main notes of the tune. Simple and calm.' : e.echo ? 'The tune again, softly and a moment later. Add it under the melody for an echo.' : `Plays the ${STY().tuneName.toLowerCase()} (${STY().prog.length} bars).`) : e.desc;
 const unitOf = e => e.type==='tune' ? STY().prog.length : 1;
 const OLD_IDS = {'fun.claps':'perc.claps','fun.snaps':'perc.snaps','fun.whoosh':'perc.whoosh','fun.pop':'perc.pop','synth.pluck':'synth.pluckp'};
 
@@ -895,7 +1042,8 @@ function compileClip(c, evs){
       for(const [b,p,l] of st.tune){
         const beat = b0+b;
         if(b >= tl*m){ if(!full) continue; } else if(beat >= lim) continue;
-        out.push({beat, p:(e.harmony ? scaleDown(p,2,st.scale) : p)+inst.tuneShift, l, v:(e.harmony?.62:.8)});
+        if(e.easy && Math.abs(b-Math.round(b))>.01) continue;
+        out.push({beat:beat+(e.echo?.5:0), p:(e.harmony ? scaleDown(p,2,st.scale) : p)+inst.tuneShift, l:e.easy?Math.max(l,1):l, v:(e.harmony?.62:e.echo?.38:.8)});
       }
     }
   } else {
@@ -948,7 +1096,7 @@ function startPlayback(evs, fromBeat, endBeat, kind, id){
   cur.timer = setInterval(tick, 25); tick(); refreshButtons();
 }
 function stopPlayback(fadeSecs=.05){
-  if(!cur) return; const c = cur; cur = null; clearInterval(c.timer);
+  if(!cur) return; const c = cur; cur = null; clearInterval(c.timer); vq = [];
   c.P.bus.gain.setTargetAtTime(0, AC.currentTime, fadeSecs/3);
   setTimeout(()=>{ try{ c.P.bus.disconnect(); }catch(e){} }, fadeSecs*1000+400);
   refreshButtons();
@@ -964,6 +1112,7 @@ function tick(){
     if(ev.beat >= c.endBeat) continue;
     if(c.kind==='song' && muted.has(ev.lane)) continue;
     trigger(c.P, ev, c.t0+ev.beat*c.spb, c.spb);
+    vq.push({t:c.t0+ev.beat*c.spb, inst:ev.inst, p:ev.p, r:ev.r, ms:ev.l*c.spb*1000});
   }
   c.sched = Math.max(c.sched, horizon);
   const beat = (now-c.t0)/c.spb;
@@ -1069,6 +1218,217 @@ async function exportMp3(p, btn){
 }
 
 /* =====================================================================
+   INSTRUMENT PICTURES + "HOW IT IS PLAYED" ANIMATION
+   Every picture is a 200×120 SVG. Parts carry data attributes:
+     data-k (piano key, semitone 0–23 from C), data-s (string), data-b (bell), data-bar (marimba bar),
+     data-h (flute hole), data-v (trumpet valve), data-r (drum part, space-separated stroke names),
+     data-actor + data-anim (the hand/stick/bow that moves on every note), data-play (tap to hear).
+   ===================================================================== */
+const HL = '#ff8a2b';
+const WHITE_SEMI = [0,2,4,5,7,9,11];
+function keyboard(x0, y0, w, h, base){
+  const W = w/14; let s = '';
+  for(let i=0;i<14;i++){ const k = WHITE_SEMI[i%7]+12*Math.floor(i/7);
+    s += `<rect data-k="${k}" data-play="p:${base+k}" x="${(x0+i*W).toFixed(1)}" y="${y0}" width="${(W-.8).toFixed(1)}" height="${h}" rx="1.5" fill="#ffffff" stroke="#9aa3b5" stroke-width=".6"/>`; }
+  for(let i=0;i<14;i++){ if(![0,1,3,4,5].includes(i%7)) continue; const k = WHITE_SEMI[i%7]+1+12*Math.floor(i/7);
+    s += `<rect data-k="${k}" data-play="p:${base+k}" x="${(x0+i*W+W*.66).toFixed(1)}" y="${y0}" width="${(W*.62).toFixed(1)}" height="${(h*.6).toFixed(1)}" rx="1" fill="#1d2433"/>`; }
+  return s;
+}
+function keysArt(kind, col){
+  let top = '', frame = col;
+  if(kind==='piano'){ frame = '#1d2433'; top = `<path d="M14 64 L18 40 Q70 4 130 18 Q178 28 186 64 Z" fill="#1d2433"/><path d="M40 60 L52 22" stroke="#6b7385" stroke-width="2.2"/><path d="M46 30 Q90 12 150 26" stroke="#3a4255" stroke-width="2" fill="none"/>`; }
+  if(kind==='epiano') top = `<rect x="10" y="44" width="180" height="20" rx="5" fill="${col}"/><circle cx="26" cy="54" r="4.5" fill="#fff" opacity=".9"/><circle cx="42" cy="54" r="4.5" fill="#fff" opacity=".9"/><rect x="140" y="50" width="40" height="7" rx="3" fill="#1d2433" opacity=".6"/>`;
+  if(kind==='organ'){ let p = ''; for(let i=0;i<12;i++){ const hgt = 22+Math.round(20*Math.sin(Math.PI*i/11)); p += `<rect x="${22+i*13.5}" y="${60-hgt}" width="9" height="${hgt}" rx="3" fill="#d9b44a" stroke="#a8862c" stroke-width=".6"/>`; }
+    top = p + `<g data-actor data-anim="glow" opacity=".25">${Array.from({length:12},(_,i)=>`<rect x="${22+i*13.5}" y="${60-(22+Math.round(20*Math.sin(Math.PI*i/11)))}" width="9" height="6" rx="3" fill="#fff6c8"/>`).join('')}</g>`; }
+  if(kind==='harmonium') top = `<rect x="16" y="18" width="168" height="44" rx="4" fill="#8a5a33"/><g data-actor data-anim="bellows" style="transform-origin:50% 0"><path d="M24 22 L176 22 L170 30 L176 38 L170 46 L176 54 L24 54 L30 46 L24 38 L30 30 Z" fill="#c9a06a" stroke="#6e4524" stroke-width="1"/></g><circle cx="40" cy="12" r="0"/>`;
+  if(kind==='synth') top = `<rect x="10" y="22" width="180" height="42" rx="6" fill="#26303f"/><rect x="18" y="28" width="70" height="28" rx="3" fill="#0f1a24"/><path data-actor data-anim="glow" opacity=".25" d="M22 42 Q30 30 38 42 T54 42 T70 42 T86 42" stroke="#4fe0d0" stroke-width="2" fill="none"/>${[110,130,150,170].map(x=>`<circle cx="${x}" cy="42" r="7" fill="#3c4a5e" stroke="${col}" stroke-width="2"/>`).join('')}`;
+  return `<rect x="8" y="58" width="184" height="58" rx="6" fill="${frame}"/>${top}${keyboard(13,64,174,48,48)}`;
+}
+function stringsLines(n, x1, x2, yTop, yBot, open, color='#efe8d6'){
+  let s = ''; for(let i=0;i<n;i++){ const y = n===1 ? yTop : yTop + i*(yBot-yTop)/(n-1);
+    s += `<line data-s="${i}" data-play="p:${open[i]}" x1="${x1}" y1="${y.toFixed(1)}" x2="${x2}" y2="${y.toFixed(1)}" stroke="${color}" stroke-width="${(1.4-i*.12).toFixed(2)}"/><line data-play="p:${open[i]}" x1="${x1}" y1="${y.toFixed(1)}" x2="${x2}" y2="${y.toFixed(1)}" stroke="transparent" stroke-width="6"/>`; }
+  return s;
+}
+function guitarArt(col, n=6, kind='guitar'){
+  const open = n===6 ? [64,59,55,50,45,40] : kind==='bass' ? [43,38,33,28] : [55,50,45,40];
+  const neckCol = kind==='bass' ? '#3a2a1c' : '#6b4a2a';
+  let frets = ''; for(let i=0;i<9;i++) frets += `<line x1="${104+i*9.5}" y1="53" x2="${104+i*9.5}" y2="71" stroke="#c8c2b0" stroke-width=".8"/>`;
+  return `<ellipse cx="46" cy="62" rx="40" ry="38" fill="${col}"/><ellipse cx="88" cy="62" rx="28" ry="30" fill="${col}"/><circle cx="72" cy="62" r="11" fill="#2a1a0a"/>
+    <rect x="96" y="53" width="90" height="18" fill="${neckCol}"/>${frets}<rect x="184" y="50" width="12" height="24" rx="3" fill="${neckCol}"/>
+    <rect x="34" y="52" width="6" height="20" rx="1.5" fill="#2a1a0a"/>${stringsLines(n,38,190,55.5,68.5,open)}
+    <path data-actor data-anim="strum" d="M64 38 l10 0 l-5 9 z" fill="#ffd27a" stroke="#a87a20" stroke-width=".8"/>`;
+}
+function violinArt(col){
+  return `<path d="M20 62 C20 38 44 34 54 46 C60 40 70 40 76 46 C86 34 110 38 110 62 C110 86 86 90 76 78 C70 84 60 84 54 78 C44 90 20 86 20 62 Z" fill="${col}"/>
+    <path d="M52 52 q3 10 0 20 M78 52 q-3 10 0 20" stroke="#2a1208" stroke-width="2" fill="none"/>
+    <rect x="108" y="57" width="64" height="10" rx="2" fill="#2a1a10"/><circle cx="180" cy="62" r="8" fill="${col}"/><circle cx="180" cy="62" r="3.5" fill="#2a1208"/>
+    <rect x="60" y="57" width="4" height="10" fill="#e9d8b0"/>${stringsLines(4,40,176,58.5,65.5,[76,69,62,55])}
+    <g data-actor data-anim="bow"><line x1="30" y1="96" x2="150" y2="34" stroke="#7a5230" stroke-width="2.6" stroke-linecap="round"/><line x1="34" y1="99" x2="152" y2="38" stroke="#f3ead2" stroke-width="1"/></g>`;
+}
+function sitarArt(col){
+  let frets = ''; for(let i=0;i<13;i++) frets += `<path d="M${72+i*8.5} 57 q2 -4 4 0" stroke="#d6c9a0" stroke-width="1" fill="none"/>`;
+  return `<circle cx="40" cy="74" r="32" fill="${col}"/><circle cx="40" cy="74" r="20" fill="#000" opacity=".12"/><rect x="62" y="58" width="128" height="12" rx="3" fill="#7a4a24"/>
+    <circle cx="160" cy="44" r="12" fill="${col}" opacity=".9"/>${frets}${stringsLines(4,24,192,60,68,[67,62,55,50],'#f2ead2')}
+    <circle data-actor data-anim="strum" cx="56" cy="50" r="5" fill="#f1c7a0" stroke="#b07a52" stroke-width="1"/>`;
+}
+function santoorArt(col){
+  let st = ''; const n = 12; for(let i=0;i<n;i++){ const y = 36+i*5.6, inset = 18*(i/(n-1));
+    st += `<line data-s="${i}" data-play="p:${[79,76,74,72,71,69,67,66,64,62,60,59][i]}" x1="${26+inset}" y1="${y.toFixed(1)}" x2="${174-inset}" y2="${y.toFixed(1)}" stroke="#f3ead2" stroke-width="1"/>`;
+    st += `<rect x="${70+(i%2)*40}" y="${(y-1.6).toFixed(1)}" width="3" height="3.2" fill="#3a2010"/>`; }
+  return `<polygon points="16,30 184,30 166,104 34,104" fill="${col}" stroke="#5a2a3a" stroke-width="1.5"/>${st}
+    <g data-actor data-anim="hammer" style="transform-origin:100% 100%"><line x1="60" y1="12" x2="88" y2="30" stroke="#5b3a1c" stroke-width="2.2" stroke-linecap="round"/><ellipse cx="58" cy="11" rx="4" ry="2.4" fill="#5b3a1c"/></g>
+    <g data-actor data-anim="hammer" style="transform-origin:0% 100%"><line x1="140" y1="12" x2="112" y2="30" stroke="#5b3a1c" stroke-width="2.2" stroke-linecap="round"/><ellipse cx="142" cy="11" rx="4" ry="2.4" fill="#5b3a1c"/></g>`;
+}
+function fluteArt(kind, col){
+  const body = kind==='bansuri' ? '#c9a25e' : '#c9d0db', edge = kind==='bansuri' ? '#8a6a32' : '#8e98a8';
+  let holes = ''; for(let i=0;i<6;i++) holes += `<circle data-h="${i}" cx="${96+i*15}" cy="60" r="${kind==='bansuri'?4:3.6}" fill="#ffffff" stroke="#3a3f4a" stroke-width="1"/>`;
+  const rings = kind==='bansuri' ? [50,84,182].map(x=>`<rect x="${x}" y="52" width="3" height="16" fill="#6e4f1e"/>`).join('') : `<rect x="160" y="52" width="2" height="16" fill="#8e98a8"/>`;
+  return `<rect data-play="p:79" x="8" y="53" width="186" height="14" rx="7" fill="${body}" stroke="${edge}" stroke-width="1"/>${rings}<ellipse cx="34" cy="60" rx="5" ry="3.2" fill="#2a2f3a"/>${holes}
+    <g data-actor data-anim="puff" opacity="0"><path d="M30 46 q-6 -6 0 -12 M38 46 q-6 -6 0 -12 M46 46 q-6 -6 0 -12" stroke="${col}" stroke-width="2" fill="none" stroke-linecap="round"/></g>`;
+}
+function trumpetArt(col){
+  const brass = '#e2b33c', dark = '#a77e1c';
+  return `<path d="M14 60 L150 60" stroke="${brass}" stroke-width="7" stroke-linecap="round"/><path d="M60 60 L60 80 Q60 92 72 92 L128 92 Q140 92 140 80 L140 60" stroke="${brass}" stroke-width="6" fill="none"/>
+    <path data-play="p:72" d="M150 52 L188 30 L188 90 L150 68 Z" fill="${brass}" stroke="${dark}" stroke-width="1.2"/><ellipse cx="188" cy="60" rx="5" ry="30" fill="${dark}"/>
+    <rect x="8" y="56" width="10" height="8" rx="2" fill="${dark}"/>
+    ${[0,1,2].map(i=>`<g data-v="${i}"><rect x="${82+i*16}" y="34" width="10" height="26" rx="2" fill="${brass}" stroke="${dark}"/><rect x="${80+i*16}" y="28" width="14" height="6" rx="2" fill="#f4e7c2" stroke="${dark}"/></g>`).join('')}
+    <g data-actor data-anim="waves" style="transform-origin:0% 50%"><path d="M194 44 q8 16 0 32 M200 38 q11 22 0 44" stroke="${col}" stroke-width="2" fill="none" stroke-linecap="round"/></g>`;
+}
+function bellsArt(col){
+  return `<rect x="16" y="14" width="168" height="7" rx="3" fill="#7a5a2a"/>${[0,1,2].map(i=>{ const x = 50+i*50;
+    return `<g data-b="${i}" data-play="p:${[79,83,86][i]}" style="transform-origin:50% 0"><line x1="${x}" y1="21" x2="${x}" y2="34" stroke="#6b5a3a" stroke-width="2"/>
+      <path d="M${x-17} 82 Q${x-16} 40 ${x} 36 Q${x+16} 40 ${x+17} 82 Z" fill="${col}" stroke="#9a7406" stroke-width="1.2"/><rect x="${x-20}" y="80" width="40" height="5" rx="2" fill="#b8890c"/><circle cx="${x}" cy="90" r="4" fill="#6b5a3a"/></g>`; }).join('')}`;
+}
+function marimbaArt(col){
+  let bars = ''; for(let i=0;i<8;i++){ const h = 66-i*4, x = 18+i*21;
+    bars += `<rect data-bar="${i}" data-play="p:${[67,69,71,72,74,76,78,79][i]}" x="${x}" y="${50-h/2}" width="17" height="${h}" rx="3" fill="${['#b07d3a','#a8743a'][i%2]}" stroke="#6e4a1e" stroke-width=".8"/>
+      <rect x="${x+5}" y="${50+h/2+4}" width="7" height="${20+i*1.5}" rx="3" fill="#9aa3b5"/>`; }
+  return `<rect x="12" y="44" width="176" height="4" fill="#4a3014"/>${bars}
+    <g data-actor data-anim="hammer" style="transform-origin:100% 100%"><line x1="70" y1="6" x2="96" y2="22" stroke="#4a3014" stroke-width="2" stroke-linecap="round"/><circle cx="68" cy="5" r="4" fill="#e84a5f"/></g>
+    <g data-actor data-anim="hammer" style="transform-origin:0% 100%"><line x1="140" y1="6" x2="114" y2="22" stroke="#4a3014" stroke-width="2" stroke-linecap="round"/><circle cx="142" cy="5" r="4" fill="#e84a5f"/></g>`;
+}
+function drumsArt(col){
+  return `<line x1="40" y1="34" x2="40" y2="112" stroke="#8e98a8" stroke-width="2"/><ellipse data-r="C" data-play="r:C" cx="40" cy="32" rx="28" ry="6" fill="#d9b44a" stroke="#a8862c" transform="rotate(-8 40 32)"/>
+    <line x1="168" y1="46" x2="168" y2="112" stroke="#8e98a8" stroke-width="2"/><g data-r="H OH" data-play="r:H"><ellipse cx="168" cy="44" rx="20" ry="4" fill="#d9b44a" stroke="#a8862c"/><ellipse cx="168" cy="48" rx="20" ry="4" fill="#cfa83e" stroke="#a8862c"/></g>
+    <g data-r="HT" data-play="r:HT"><rect x="66" y="40" width="28" height="18" fill="${col}"/><ellipse cx="80" cy="40" rx="14" ry="5" fill="#f2f2ee" stroke="#999"/></g>
+    <g data-r="LT" data-play="r:LT"><rect x="104" y="40" width="30" height="20" fill="${col}"/><ellipse cx="119" cy="40" rx="15" ry="5" fill="#f2f2ee" stroke="#999"/></g>
+    <g data-r="K" data-play="r:K"><circle cx="100" cy="86" r="28" fill="${col}"/><circle cx="100" cy="86" r="21" fill="#f2f2ee"/><circle cx="100" cy="86" r="7" fill="${col}" opacity=".6"/></g>
+    <g data-r="S CL R" data-play="r:S"><rect x="134" y="70" width="32" height="14" fill="#c9d0db" stroke="#8e98a8"/><ellipse cx="150" cy="70" rx="16" ry="5" fill="#f2f2ee" stroke="#999"/></g>
+    <g data-actor data-anim="stick" style="transform-origin:100% 100%"><line x1="118" y1="26" x2="146" y2="60" stroke="#c8935a" stroke-width="3" stroke-linecap="round"/></g>
+    <g data-actor data-anim="stick" style="transform-origin:0% 100%"><line x1="186" y1="28" x2="160" y2="60" stroke="#c8935a" stroke-width="3" stroke-linecap="round"/></g>`;
+}
+function edrumsArt(col){
+  const labels = [['K','Kick'],['S','Snare'],['CL','Clap'],['H','Hat'],['OH','Open'],['CB','Bell'],['R','Rim'],['C','Crash']];
+  return `<rect x="10" y="10" width="180" height="100" rx="10" fill="#1d2433"/><rect x="20" y="18" width="70" height="12" rx="3" fill="#0f1a24"/><circle cx="160" cy="24" r="5" fill="${col}"/><circle cx="176" cy="24" r="5" fill="#4fe0d0"/>`+
+    labels.map(([r,n],i)=>{ const x = 20+(i%4)*42, y = 38+Math.floor(i/4)*34;
+      return `<g data-r="${r}" data-play="r:${r}"><rect x="${x}" y="${y}" width="36" height="28" rx="5" fill="${col}" opacity=".85"/><text x="${x+18}" y="${y+18}" font-size="8" font-weight="800" text-anchor="middle" fill="#fff" font-family="sans-serif">${n}</text></g>`; }).join('');
+}
+function tablaArt(){
+  return `<g data-r="Ge Ke Dha Dhin" data-play="r:Ge"><path d="M30 62 Q30 108 70 110 Q110 108 110 62 Z" fill="#b87333" stroke="#7a4a1e"/><ellipse cx="70" cy="62" rx="40" ry="11" fill="#eadcbc" stroke="#7a5a2a"/><ellipse cx="62" cy="62" rx="10" ry="4" fill="#222"/></g>
+    <g data-r="Na Tin Tun Te Dha Dhin" data-play="r:Na"><path d="M126 52 L128 108 Q148 114 168 108 L170 52 Z" fill="#7a4a22" stroke="#4a2a12"/><ellipse cx="148" cy="52" rx="22" ry="7" fill="#eadcbc" stroke="#7a5a2a"/><ellipse cx="148" cy="52" rx="8" ry="3" fill="#222"/>
+      ${[0,1,2,3,4].map(i=>`<line x1="${130+i*9}" y1="58" x2="${131+i*9}" y2="106" stroke="#d9c79a" stroke-width=".8"/>`).join('')}</g>
+    <g data-actor data-anim="tap" data-for="Ge Ke Dha Dhin"><path d="M52 34 q4 -10 14 -8 l16 6 q6 3 2 8 l-18 6 q-12 2 -14 -12 z" fill="#f1c7a0" stroke="#b07a52"/></g>
+    <g data-actor data-anim="tap" data-for="Na Tin Tun Te Dha Dhin"><path d="M140 22 q6 -8 14 -4 l10 8 q4 4 -2 7 l-16 4 q-10 0 -6 -15 z" fill="#f1c7a0" stroke="#b07a52"/></g>`;
+}
+function dholakArt(col){
+  let ropes = ''; for(let i=0;i<10;i++) ropes += `<line x1="${38+i*13}" y1="${i%2?44:96}" x2="${44+i*13}" y2="${i%2?96:44}" stroke="#f3ead2" stroke-width="1.2"/>`;
+  return `<path d="M30 46 Q100 30 170 46 L170 94 Q100 110 30 94 Z" fill="${col}" stroke="#5a2010"/>${ropes}
+    <g data-r="Ge Dha" data-play="r:Ge"><ellipse cx="30" cy="70" rx="9" ry="24" fill="#eadcbc" stroke="#7a5a2a"/></g>
+    <g data-r="Na Ta Dha" data-play="r:Na"><ellipse cx="170" cy="70" rx="8" ry="22" fill="#eadcbc" stroke="#7a5a2a"/></g>
+    <g data-actor data-anim="tap" data-for="Ge Dha"><path d="M6 46 q8 -8 16 -2 l6 14 q2 6 -4 6 l-10 -2 q-10 -4 -8 -16 z" fill="#f1c7a0" stroke="#b07a52"/></g>
+    <g data-actor data-anim="tap" data-for="Na Ta Dha"><path d="M180 44 q8 -6 14 2 l-2 14 q-2 6 -8 4 l-8 -6 q-6 -6 4 -14 z" fill="#f1c7a0" stroke="#b07a52"/></g>`;
+}
+function percArt(col){
+  return `<g data-r="CL SN AP" data-play="r:CL"><path d="M14 70 q0 -24 14 -30 l6 30 z" fill="#f1c7a0" stroke="#b07a52"/><path d="M50 70 q0 -24 -14 -30 l-6 30 z" fill="#f1c7a0" stroke="#b07a52"/></g>
+    <g data-r="SH" data-play="r:SH" data-hit="shake"><ellipse cx="74" cy="58" rx="9" ry="13" fill="${col}"/><rect x="72" y="70" width="4" height="16" rx="2" fill="#7a4a22"/></g>
+    <g data-r="TB" data-play="r:TB" data-hit="shake"><circle cx="108" cy="60" r="16" fill="none" stroke="#c8935a" stroke-width="5"/>${[0,1,2,3,4,5].map(i=>`<circle cx="${108+16*Math.cos(i*Math.PI/3)}" cy="${60+16*Math.sin(i*Math.PI/3)}" r="3" fill="#d9b44a"/>`).join('')}</g>
+    <g data-r="CB WB TR BH BL" data-play="r:CB"><path d="M136 48 L156 48 L160 76 L132 76 Z" fill="#8e98a8" stroke="#5a6272"/></g>
+    <g data-r="POP W RC C" data-play="r:POP"><path d="M170 86 L186 50 L196 58 Z" fill="${col}"/>${[[178,40,'#ffd23f'],[188,34,'#4fe0d0'],[168,36,'#ff7a1a'],[194,44,'#8e55c9']].map(([x,y,c])=>`<rect x="${x}" y="${y}" width="4" height="4" fill="${c}" transform="rotate(30 ${x} ${y})"/>`).join('')}</g>
+    <text x="100" y="108" font-size="9" text-anchor="middle" fill="#8a93a5" font-family="sans-serif" font-weight="700">claps · shaker · tambourine · cowbell · popper</text>`;
+}
+const ART = {
+  piano:    {map:'keys',  draw:c=>keysArt('piano',c)},
+  epiano:   {map:'keys',  draw:c=>keysArt('epiano',c)},
+  organ:    {map:'keys',  draw:c=>keysArt('organ',c)},
+  harmonium:{map:'keys',  draw:c=>keysArt('harmonium',c)},
+  synth:    {map:'keys',  draw:c=>keysArt('synth',c)},
+  guitar:   {map:'strings', n:6, draw:c=>guitarArt(c,6)},
+  bass:     {map:'strings', n:4, draw:c=>guitarArt(c,4,'bass')},
+  violin:   {map:'strings', n:4, draw:violinArt},
+  sitar:    {map:'strings', n:4, draw:sitarArt},
+  santoor:  {map:'strings', n:12, draw:santoorArt},
+  flute:    {map:'holes', draw:c=>fluteArt('flute',c)},
+  bansuri:  {map:'holes', draw:c=>fluteArt('bansuri',c)},
+  trumpet:  {map:'valves', draw:trumpetArt},
+  bells:    {map:'bells', draw:bellsArt},
+  marimba:  {map:'bars',  draw:marimbaArt},
+  drums:    {map:'kit',   draw:drumsArt},
+  edrums:   {map:'kit',   draw:edrumsArt},
+  tabla:    {map:'kit',   draw:tablaArt},
+  dholak:   {map:'kit',   draw:dholakArt},
+  perc:     {map:'kit',   draw:percArt},
+};
+const artSVG = k => `<div class="art" data-inst="${k}"><svg viewBox="0 0 200 120" role="img" aria-label="${INST[k].name}">${ART[k].draw(INST[k].color)}</svg></div>`;
+const HITS = {
+  bump: [{transform:'scale(1)'},{transform:'scale(1.08)'},{transform:'scale(1)'}],
+  swing:[{transform:'rotate(0deg)'},{transform:'rotate(13deg)'},{transform:'rotate(-9deg)'},{transform:'rotate(4deg)'},{transform:'rotate(0deg)'}],
+  shake:[{transform:'rotate(0deg)'},{transform:'rotate(-14deg)'},{transform:'rotate(12deg)'},{transform:'rotate(0deg)'}],
+  vib:  [{transform:'translateY(0)'},{transform:'translateY(1.4px)'},{transform:'translateY(-1.4px)'},{transform:'translateY(.9px)'},{transform:'translateY(-.5px)'},{transform:'translateY(0)'}],
+  valve:[{transform:'translateY(0)'},{transform:'translateY(5px)'},{transform:'translateY(5px)'},{transform:'translateY(0)'}],
+};
+const ACTS = {
+  strum:  [{transform:'translateY(-8px)'},{transform:'translateY(10px)'},{transform:'translateY(0)'}],
+  stick:  [{transform:'rotate(0deg)'},{transform:'rotate(-20deg)'},{transform:'rotate(0deg)'}],
+  hammer: [{transform:'rotate(0deg)'},{transform:'rotate(16deg)'},{transform:'rotate(0deg)'}],
+  tap:    [{transform:'translateY(-4px)'},{transform:'translateY(7px)'},{transform:'translateY(-4px)'}],
+  puff:   [{opacity:0,transform:'translateX(0)'},{opacity:1,transform:'translateX(5px)'},{opacity:0,transform:'translateX(12px)'}],
+  bellows:[{transform:'scaleY(1)'},{transform:'scaleY(.84)'},{transform:'scaleY(1)'}],
+  waves:  [{opacity:0,transform:'scale(.5)'},{opacity:1,transform:'scale(1)'},{opacity:0,transform:'scale(1.4)'}],
+  glow:   [{opacity:.25},{opacity:1},{opacity:.25}],
+};
+const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+function flashFill(el, ms){ const orig = el.getAttribute('fill'); el.animate([{fill:HL},{fill:HL,offset:.55},{fill:orig}],{duration:ms}); }
+function animateInst(k, ev, ms){
+  const roots = document.querySelectorAll(`.art[data-inst="${k}"]`); if(!roots.length) return;
+  const a = ART[k]; ms = Math.max(180, Math.min(ms||300, 900));
+  for(const root of roots){
+    if(root.offsetParent === null) continue;
+    if(ev.r !== undefined){ root.querySelectorAll(`[data-r~="${ev.r}"]`).forEach(el=>{ el.animate(HITS[el.dataset.hit||'bump'],{duration:reduceMotion?120:220}); el.querySelectorAll('ellipse,rect,circle').forEach((x,i)=>{ if(i<2) flashFill(x,260); }); }); }
+    else if(a.map==='keys'){ root.querySelectorAll(`[data-k="${(((ev.p-48)%24)+24)%24}"]`).forEach(el=>flashFill(el, ms)); }
+    else if(a.map==='strings'){ const n = a.n; root.querySelectorAll(`line[data-s="${((ev.p%n)+n)%n}"]`).forEach(el=>{ if(!reduceMotion) el.animate(HITS.vib,{duration:320}); const o = el.getAttribute('stroke'); el.animate([{stroke:HL},{stroke:o}],{duration:420}); }); }
+    else if(a.map==='bells'){ root.querySelectorAll(`[data-b="${((ev.p%3)+3)%3}"]`).forEach(el=>el.animate(HITS.swing,{duration:reduceMotion?150:700})); }
+    else if(a.map==='bars'){ root.querySelectorAll(`[data-bar="${((ev.p%8)+8)%8}"]`).forEach(el=>{ flashFill(el,320); }); }
+    else if(a.map==='holes'){ const deg = ((ev.p%12)+12)%12, covered = [6,6,5,5,4,3,3,2,2,1,1,0][(deg-7+12)%12];
+      root.querySelectorAll('[data-h]').forEach(h=>{ const on = (+h.dataset.h) < covered; h.setAttribute('fill', on ? '#2a2f3a' : '#ffffff'); clearTimeout(h._t); h._t = setTimeout(()=>h.setAttribute('fill','#ffffff'), ms); }); }
+    else if(a.map==='valves'){ const pat = [[1,1,1],[1,0,1],[0,1,1],[1,1,0],[1,0,0],[0,1,0],[0,0,0]][((ev.p%7)+7)%7];
+      root.querySelectorAll('[data-v]').forEach(v=>{ if(pat[+v.dataset.v]) v.animate(HITS.valve,{duration:ms}); }); }
+    if(reduceMotion) continue;
+    root.querySelectorAll('[data-actor]').forEach(act=>{ const f = act.dataset.for; if(f && (ev.r===undefined || !f.split(' ').includes(ev.r))) return;
+      if(act.dataset.anim==='bow'){ const d = act._dir = !act._dir; act.animate([{transform:`translateX(${d?-14:14}px)`},{transform:`translateX(${d?14:-14}px)`}],{duration:Math.max(260,ms),fill:'forwards'}); }
+      else act.animate(ACTS[act.dataset.anim],{duration:act.dataset.anim==='glow'||act.dataset.anim==='waves'?Math.max(300,ms):240}); });
+  }
+}
+/* visual queue: notes scheduled for the future are shown when their time comes */
+let vq = [];
+function visualTick(){
+  if(AC && vq.length){ const now = AC.currentTime + .01; let i = 0;
+    while(i < vq.length && vq[i].t <= now){ const v = vq[i++]; animateInst(v.inst, v, v.ms); }
+    if(i) vq.splice(0, i); if(vq.length > 4000) vq.splice(0, vq.length-4000); }
+}
+/* tap the picture to play it */
+let tapPlayer = null, tapKey = '';
+function tapPlay(k, spec){
+  ensureAudio(); const key = project.room+'|'+project.vol;
+  if(!tapPlayer || tapKey !== key){ if(tapPlayer){ const old = tapPlayer; setTimeout(()=>{ try{ old.bus.disconnect(); }catch(e){} }, 4000); } tapPlayer = makePlayer(AC, master); tapKey = key; }
+  const inst = INST[k], ev = {inst:k, l:1, v:.8, sound:inst.sound, kit:inst.kit};
+  if(spec && spec.startsWith('r:')) ev.r = spec.slice(2);
+  else if(spec && spec.startsWith('p:')) ev.p = +spec.slice(2) + (inst.kit ? 0 : (project.key||0));
+  else if(inst.kit) ev.r = Object.keys(inst.kit)[0];
+  else ev.p = 67 + (inst.tuneShift||0) + (project.key||0) - (k==='bass'?24:0);
+  trigger(tapPlayer, ev, AC.currentTime+.01, .5); animateInst(k, ev, 420);
+}
+
+/* =====================================================================
    PROJECT + LIBRARY
    ===================================================================== */
 const LIBKEY = 'trackmaker.lib.v3';
@@ -1103,11 +1463,15 @@ function normalize(p){
   p.clips = p.clips.filter(c=>EL[c.el] && ids.has(c.lane));
   p.clips.forEach(c=>{ const e = EL[c.el]; if(e.inst !== p.lanes.find(l=>l.id===c.lane).inst) p.lanes.find(l=>l.id===c.lane).inst = e.inst; });
   Object.assign(p, {v:3, id:p.id||uid('s'), pos:0, key:Math.max(-5,Math.min(5,+p.key||0)), room:ROOM[p.room]!==undefined?p.room:'room', vol:+p.vol||1, loop:!!p.loop,
-    bpm:Math.min(160,Math.max(60,+p.bpm||100)), bars:Math.min(160,Math.max(2,+p.bars||16)), title:String(p.title||'My song').slice(0,50), created:p.created||Date.now(), updated:p.updated||Date.now()});
+    bpm:Math.min(160,Math.max(60,+p.bpm||100)), bars:Math.min(160,Math.max(2,+p.bars||16)), title:String(p.title||'My song').slice(0,60), created:p.created||Date.now(), updated:p.updated||Date.now()});
   return p;
 }
-function saveLib(){ try{ localStorage.setItem(LIBKEY, JSON.stringify(lib)); $('#saved').textContent = 'Saved ✓'; }catch(e){ $('#saved').textContent = 'Not saved'; } }
-function persist(){ project.updated = Date.now(); const i = lib.songs.findIndex(s=>s.id===project.id); if(i>=0) lib.songs[i] = project; else lib.songs.unshift(project); lib.cur = project.id; saveLib(); }
+function setSaved(t){ $('#saved').textContent = t; }
+function saveLib(){
+  if(CLOUD){ try{ if(user) localStorage.setItem('trackmaker.cur.'+user.uid, lib.cur||''); }catch(e){} return; }
+  try{ localStorage.setItem(LIBKEY, JSON.stringify(lib)); setSaved('Saved ✓'); }catch(e){ setSaved('Not saved'); }
+}
+function persist(){ project.updated = Date.now(); const i = lib.songs.findIndex(s=>s.id===project.id); if(i>=0) lib.songs[i] = project; else lib.songs.unshift(project); lib.cur = project.id; saveLib(); cloudSave(project); }
 function cleanLanes(){ const used = new Set(project.clips.map(c=>c.lane)); project.lanes = project.lanes.filter(l=>used.has(l.id)); }
 function snapshot(){ hist.push(JSON.stringify(project)); if(hist.length>80) hist.shift(); }
 function changed(){ cleanLanes(); persist(); refreshSongEvents(); renderCreate(); }
@@ -1127,7 +1491,16 @@ const LH = () => (window.innerWidth <= 760 ? 120 : 178);
 const ppb = () => BARPX/STY().m;
 const KEYS = ['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'];
 
-function renderHeader(){ $('#title').value = project.title; $('#libCount').textContent = lib.songs.length; }
+function renderHeader(){ $('#title').value = project.title; $('#libCount').textContent = lib.songs.length;
+  const b = project.baseId && lib.songs.find(x=>x.id===project.baseId); $('#baseInfo').textContent = project.baseId ? 'Copy of “'+(b ? b.title : project.baseTitle || 'another song')+'”' : ''; }
+function copySong(p, open){
+  const root = (p.baseId && lib.songs.find(x=>x.id===p.baseId)) || p;
+  const c = JSON.parse(JSON.stringify(p)); c.id = uid('s'); c.baseId = root.id; c.baseTitle = root.title;
+  const n = lib.songs.filter(x=>x.baseId===root.id).length + 2;
+  c.title = (root.title.replace(/ – version \d+$/,'')+' – version '+n).slice(0,60); c.created = c.updated = Date.now(); c.pos = 0;
+  lib.songs.push(c); cloudSave(c, true); saveLib();
+  if(open){ openSong(c.id); toast('You are now editing “'+c.title+'”. The original is unchanged.'); } else { renderLib(); toast('Copy made: “'+c.title+'”.'); }
+}
 function renderStrip(){
   $('#strip').innerHTML = CATS.map(cat=>`<div class="group"><span>${cat}</span>${Object.entries(INST).filter(([,i])=>i.cat===cat).map(([k,i])=>{
     const n = project.clips.filter(c=>EL[c.el].inst===k).length;
@@ -1137,6 +1510,8 @@ function renderSounds(){
   const inst = INST[curInst], all = ELEMENTS.filter(e=>e.inst===curInst), els = all.filter(e=>filter==='all' || e.type===filter);
   $('#soundsCard').style.setProperty('--c', inst.color);
   $('#soundsTitle').textContent = inst.name+' sounds'; $('#soundsCount').textContent = all.length+' sounds';
+  const st = $('#stage'); if(st.dataset.inst !== curInst){ st.dataset.inst = curInst;
+    st.innerHTML = artSVG(curInst)+`<p><b>Tap the ${inst.name.toLowerCase()}</b> to hear it. When a sound plays, the picture shows how the ${inst.name.toLowerCase()} is played.</p>`; }
   document.querySelectorAll('#filters button').forEach(b=>{ b.classList.toggle('on', b.dataset.f===filter); b.hidden = b.dataset.f!=='all' && !all.some(e=>e.type===b.dataset.f); });
   $('#slist').innerHTML = els.map(e=>{ const on = cur && cur.kind==='preview' && cur.id===e.id;
     return `<div class="srow"><button class="play ${on?'on':''}" data-listen="${e.id}" aria-label="${on?'Stop':'Listen to'} ${esc(elName(e))}" title="${on?'Stop':'Listen'}">${on?'■':'▶'}</button>
@@ -1173,7 +1548,15 @@ function renderTimeline(){
     h += `<div class="past-end" style="left:${endX}px"></div></div></div>`;
   }
   h += `<div class="pos" id="pos"></div></div>`;
-  $('#tl').innerHTML = h; updatePos();
+  $('#tl').innerHTML = h; updatePos(); renderBand();
+}
+function renderBand(){
+  const band = $('#band'), on = $('#bandTgl').checked, used = [...new Set(project.lanes.map(l=>l.inst))];
+  band.hidden = !on || !used.length; if(band.hidden) return;
+  const key = used.join(',')+'|'+project.lanes.filter(l=>l.mute).map(l=>l.inst).join(',');
+  if(band.dataset.key === key) return; band.dataset.key = key;
+  band.innerHTML = used.map(k=>{ const allMuted = project.lanes.filter(l=>l.inst===k).every(l=>l.mute);
+    return `<div class="band-item ${allMuted?'muted':''}" data-band="${k}" title="Show ${INST[k].name} sounds">${artSVG(k)}${INST[k].name}</div>`; }).join('');
 }
 let seeking = false;
 function updatePos(){
@@ -1216,12 +1599,16 @@ const ago = t => { const d = (Date.now()-t)/1000; if(d<60) return 'Just now'; if
 let renaming = null, confirmDel = null;
 function renderLib(){
   $('#libCount').textContent = lib.songs.length;
-  const rows = lib.songs.slice().sort((a,b)=>b.updated-a.updated);
+  const ids = new Set(lib.songs.map(x=>x.id)), rows = [];
+  const roots = lib.songs.filter(x=>!x.baseId || !ids.has(x.baseId)).sort((a,b)=>b.updated-a.updated);
+  roots.forEach(r=>{ rows.push(r); lib.songs.filter(x=>x.baseId===r.id).sort((a,b)=>a.created-b.created).forEach(c=>rows.push(c)); });
   $('#libBody').innerHTML = rows.map(p=>{
+    const child = p.baseId && ids.has(p.baseId), nCopies = lib.songs.filter(x=>x.baseId===p.id).length;
     const st = STYLES[p.style], insts = [...new Set(p.clips.map(c=>EL[c.el]?.inst).filter(Boolean))];
     const len = p.bars*st.m*60/p.bpm, isCur = p.id===project.id;
-    return `<tr class="${isCur?'cur':''}" data-id="${p.id}">
-      <td>${renaming===p.id ? `<input type="text" class="ren" value="${esc(p.title)}" maxlength="50" aria-label="New name">` : `<span class="name">${esc(p.title)}</span>${isCur?'<span class="badge">Open now</span>':''}`}</td>
+    return `<tr class="${isCur?'cur':''} ${child?'child':''}" data-id="${p.id}">
+      <td>${renaming===p.id ? `<input type="text" class="ren" value="${esc(p.title)}" maxlength="60" aria-label="New name">` : `<span class="name">${esc(p.title)}</span>${isCur?'<span class="badge">Open now</span>':''}`}
+        ${child ? '<div class="sub">Copy, based on the song above</div>' : nCopies ? `<div class="sub">Original · ${nCopies} cop${nCopies>1?'ies':'y'} below</div>` : ''}</td>
       <td class="hide-s">${st.name}</td><td class="num">${fmtT(len)}</td>
       <td class="hide-s"><div class="dots">${insts.map(k=>`<i style="--c:${INST[k].color}" title="${INST[k].name}"></i>`).join('') || '<span class="muted">Empty</span>'}</div></td>
       <td class="num hide-s">${ago(p.updated)}</td>
@@ -1230,7 +1617,7 @@ function renderLib(){
         <button data-a="mp3">Download MP3</button>
         <button data-a="file" title="Save a project file to your computer">Save file</button>
         <button data-a="ren">${renaming===p.id?'Done':'Rename'}</button>
-        <button data-a="dup">Copy</button>
+        <button data-a="dup" title="Make a copy to edit. This song stays unchanged.">Make a copy</button>
         <button data-a="del" class="danger">${confirmDel===p.id?'Click again to delete':'Delete'}</button>
       </div></td></tr>`; }).join('') || `<tr><td colspan="6" class="hint">No songs yet. Press <b>+ New song</b> to start.</td></tr>`;
   const r = document.querySelector('.ren'); if(r){ r.focus(); r.select(); }
@@ -1240,13 +1627,19 @@ function showTab(t){
   $('#tabLib').classList.toggle('on', lib_); $('#tabCreate').classList.toggle('on', !lib_);
   $('#tabLib').setAttribute('aria-selected', lib_); $('#tabCreate').setAttribute('aria-selected', !lib_);
   $('#title').hidden = lib_; $('#undoBtn').hidden = lib_; $('#mp3Btn').hidden = lib_;
-  if(lib_){ pauseSong(); stopPlayback(); renaming = null; confirmDel = null; renderLib(); } else { renderCreate(); }
+  $('#copyBtn').hidden = lib_; $('#baseInfo').hidden = lib_;
+  if(lib_){ pauseSong(); stopPlayback(); renaming = null; confirmDel = null; renderLib(); renderImportBanner(); } else { renderCreate(); }
 }
 
 /* ---------- events: create tab ---------- */
 $('#tabCreate').onclick = ()=>showTab('create');
 $('#tabLib').onclick = ()=>showTab('lib');
 $('#strip').addEventListener('click', e=>{ const b = e.target.closest('[data-inst]'); if(!b) return; curInst = b.dataset.inst; filter = 'all'; renderStrip(); renderSounds(); $('#slist').scrollTop = 0; });
+$('#stage').addEventListener('pointerdown', e=>{ const art = e.target.closest('.art'); if(!art) return; e.preventDefault();
+  const t = e.target.closest('[data-play]'); tapPlay(art.dataset.inst, t ? t.dataset.play : null); });
+$('#band').addEventListener('click', e=>{ const b = e.target.closest('[data-band]'); if(!b) return; curInst = b.dataset.band; filter = 'all'; renderStrip(); renderSounds(); });
+$('#bandTgl').onchange = e=>{ try{ localStorage.setItem('trackmaker.band', e.target.checked?'1':'0'); }catch(x){} $('#band').dataset.key = ''; renderBand(); };
+$('#copyBtn').onclick = ()=>{ stopPlayback(); copySong(project, true); };
 $('#filters').addEventListener('click', e=>{ const b = e.target.closest('[data-f]'); if(!b) return; filter = b.dataset.f; renderSounds(); });
 $('#slist').addEventListener('click', e=>{
   const L = e.target.closest('[data-listen]'), A = e.target.closest('[data-add]');
@@ -1337,6 +1730,7 @@ $('#loop').onchange = e=>{ project.loop = e.target.checked; persist(); };
 $('#zoomIn').onclick = ()=>{ BARPX = Math.min(160, Math.round(BARPX*1.25)); renderTimeline(); };
 $('#zoomOut').onclick = ()=>{ BARPX = Math.max(28, Math.round(BARPX/1.25)); renderTimeline(); };
 function frame(){
+  visualTick();
   if(isSong()){ updatePos(); const x = curBeat()*ppb(), tl = $('#tl'), vis = tl.clientWidth-LH();
     if(x > tl.scrollLeft+vis-50 || x < tl.scrollLeft) tl.scrollLeft = Math.max(0, x-80); }
   requestAnimationFrame(frame);
@@ -1365,11 +1759,12 @@ $('#libBody').addEventListener('click', e=>{
   if(a==='open') openSong(id);
   if(a==='mp3') exportMp3(p, b);
   if(a==='file') deliver(fileBase(p)+'.json', new Blob([JSON.stringify(p,null,1)],{type:'application/json'}), true);
-  if(a==='ren'){ if(renaming===id){ const v = document.querySelector('.ren').value.trim(); if(v){ p.title = v; p.updated = Date.now(); saveLib(); } renaming = null; } else renaming = id; renderLib(); }
-  if(a==='dup'){ const c = JSON.parse(JSON.stringify(p)); c.id = uid('s'); c.title = (p.title+' (copy)').slice(0,50); c.updated = Date.now(); lib.songs.push(c); saveLib(); renderLib(); toast('Copy made.'); }
+  if(a==='ren'){ if(renaming===id){ const v = document.querySelector('.ren').value.trim(); if(v){ p.title = v.slice(0,60); p.updated = Date.now(); saveLib(); cloudSave(p, true); } renaming = null; } else renaming = id; renderLib(); }
+  if(a==='dup') copySong(p, false);
   if(a==='del'){ if(confirmDel!==id){ confirmDel = id; renderLib(); return; }
-    confirmDel = null; lib.songs = lib.songs.filter(s=>s.id!==id);
-    if(project.id===id){ if(!lib.songs.length) lib.songs.push(emptyProject('birthday')); project = lib.songs.slice().sort((x,y)=>y.updated-x.updated)[0]; hist = []; selId = null; lib.cur = project.id; }
+    confirmDel = null; lib.songs = lib.songs.filter(s=>s.id!==id); cloudDelete(id);
+    lib.songs.forEach(x=>{ if(x.baseId===id){ x.baseId = null; cloudSave(x); } });
+    if(project.id===id){ if(!lib.songs.length){ const n = emptyProject('birthday'); lib.songs.push(n); cloudSave(n, true); } project = lib.songs.slice().sort((x,y)=>y.updated-x.updated)[0]; hist = []; selId = null; lib.cur = project.id; }
     saveLib(); renderLib(); toast('Song deleted.'); }
 });
 $('#libBody').addEventListener('keydown', e=>{ if(e.target.classList.contains('ren') && e.key==='Enter'){ e.target.closest('tr').querySelector('[data-a=ren]').click(); } if(e.key==='Escape'){ renaming = null; renderLib(); } });
@@ -1387,8 +1782,99 @@ document.addEventListener('keydown', e=>{
 });
 window.addEventListener('resize', ()=>{ if(!$('#paneCreate').hidden) renderTimeline(); });
 
+/* =====================================================================
+   ACCOUNTS (Firebase email + password sign-in, songs stored per account)
+   ===================================================================== */
+let fbAuth = null, fbDb = null, user = null, authMode = 'in';
+const pending = new Map(); let saveTimer = null;
+const songsCol = () => fbDb.collection('users').doc(user.uid).collection('songs');
+function loadScript(src){ return new Promise((res,rej)=>{ const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = ()=>rej(new Error('Could not load '+src)); document.head.appendChild(el); }); }
+function cloudSave(p, now){ if(!CLOUD || !user) return; pending.set(p.id, p); clearTimeout(saveTimer); setSaved('Saving…'); saveTimer = setTimeout(flushSaves, now ? 50 : 1200); }
+async function flushSaves(){
+  if(!user || !pending.size) return; const items = [...pending.values()]; pending.clear();
+  try{ await Promise.all(items.map(p=>songsCol().doc(p.id).set({title:p.title, style:p.style, updated:p.updated, created:p.created||p.updated, baseId:p.baseId||null, json:JSON.stringify(p)})));
+    if(!pending.size) setSaved('Saved ✓'); }
+  catch(err){ console.error(err); items.forEach(p=>{ if(!pending.has(p.id)) pending.set(p.id,p); }); setSaved('Not saved yet. Retrying…'); clearTimeout(saveTimer); saveTimer = setTimeout(flushSaves, 5000); }
+}
+async function cloudDelete(id){ if(!CLOUD || !user) return; pending.delete(id); try{ await songsCol().doc(id).delete(); }catch(err){ toast('Could not delete it from your account: '+friendly(err)); } }
+window.addEventListener('beforeunload', e=>{ if(CLOUD && pending.size){ flushSaves(); e.preventDefault(); e.returnValue = ''; } });
+function friendly(err){
+  const c = (err && err.code) || '';
+  return ({'auth/invalid-email':'That email address doesn’t look right.','auth/missing-password':'Please type your password.',
+    'auth/invalid-credential':'Email or password is wrong.','auth/wrong-password':'Email or password is wrong.','auth/user-not-found':'There is no account with this email. Choose “Create account”.',
+    'auth/email-already-in-use':'An account with this email already exists. Choose “Sign in”.','auth/weak-password':'Please use a password with at least 6 characters.',
+    'auth/too-many-requests':'Too many tries. Please wait a few minutes and try again.','auth/network-request-failed':'No internet connection. Check it and try again.',
+    'auth/unauthorized-domain':'This website address is not allowed yet. Add it under Authentication → Settings → Authorized domains in Firebase.',
+    'permission-denied':'Your account isn’t allowed to save here. Check the Firestore rules.'})[c] || (err && err.message) || 'Something went wrong.';
+}
+function setAuthMode(m){ authMode = m; document.querySelectorAll('#authTabs button').forEach(b=>b.classList.toggle('on', b.dataset.mode===m));
+  $('#authTitle').textContent = m==='in' ? 'Sign in' : 'Create your account'; $('#authGo').textContent = m==='in' ? 'Sign in' : 'Create account';
+  $('#pass2Wrap').hidden = m==='in'; $('#authPass').autocomplete = m==='in' ? 'current-password' : 'new-password'; $('#forgotBtn').hidden = m!=='in';
+  authMsg(''); }
+function authMsg(t, ok){ const el = $('#authMsg'); el.textContent = t; el.classList.toggle('ok', !!ok); }
+function showAuth(on){ $('#authScreen').hidden = !on; if(on){ $('#authArt').innerHTML = ['piano','guitar','tabla','flute','drums'].map(artSVG).join(''); setTimeout(()=>$('#authEmail').focus(), 50); } }
+$('#authTabs').addEventListener('click', e=>{ const b = e.target.closest('[data-mode]'); if(b) setAuthMode(b.dataset.mode); });
+$('#authForm').addEventListener('submit', async e=>{
+  e.preventDefault(); if(!fbAuth){ authMsg('Still connecting. Please wait a moment.'); return; }
+  const email = $('#authEmail').value.trim(), pass = $('#authPass').value;
+  if(!email || !pass){ authMsg('Please type your email and password.'); return; }
+  if(authMode==='up'){ if(pass.length < 6){ authMsg('Please use a password with at least 6 characters.'); return; } if(pass !== $('#authPass2').value){ authMsg('The two passwords are different.'); return; } }
+  const btn = $('#authGo'); btn.disabled = true; authMsg('');
+  try{
+    if(authMode==='in') await fbAuth.signInWithEmailAndPassword(email, pass);
+    else { const cred = await fbAuth.createUserWithEmailAndPassword(email, pass); try{ await cred.user.sendEmailVerification(); }catch(x){} }
+  }catch(err){ authMsg(friendly(err)); }
+  finally{ btn.disabled = false; }
+});
+$('#forgotBtn').onclick = async ()=>{ const email = $('#authEmail').value.trim(); if(!email){ authMsg('Type your email above first, then press “Forgot your password?” again.'); return; }
+  try{ await fbAuth.sendPasswordResetEmail(email); authMsg('We sent a link to '+email+' to set a new password. Check your inbox (and spam).', true); }catch(err){ authMsg(friendly(err)); } };
+$('#signOutBtn').onclick = async ()=>{ stopPlayback(); await flushSaves(); await fbAuth.signOut(); };
+async function onUser(u){
+  user = u;
+  if(!u){ stopPlayback(); lib = {cur:null, songs:[]}; $('#userBox').hidden = true; setAuthMode('in'); showAuth(true); return; }
+  showAuth(false); $('#userEmail').textContent = u.email; $('#userBox').hidden = false; setSaved('Loading your songs…');
+  try{
+    const snap = await songsCol().get(), songs = [];
+    snap.forEach(d=>{ try{ songs.push(normalize(JSON.parse(d.data().json))); }catch(e){} });
+    lib = {cur:null, songs};
+    if(!songs.length){ const p = birthdayExample(); lib.songs.push(p); cloudSave(p, true); }
+    let curId = null; try{ curId = localStorage.getItem('trackmaker.cur.'+u.uid); }catch(e){}
+    project = lib.songs.find(x=>x.id===curId) || lib.songs.slice().sort((a,b)=>b.updated-a.updated)[0]; lib.cur = project.id;
+    hist = []; selId = null; showTab('create'); setSaved('');
+    if(localSongs().length) toast('Songs saved on this computer were found. Open My songs to move them into your account.');
+  }catch(err){ console.error(err); setSaved(''); toast('Could not load your songs: '+friendly(err)); }
+}
+function localSongs(){
+  try{ if(localStorage.getItem('trackmaker.ignoreLocal.'+(user&&user.uid))) return [];
+    const raw = JSON.parse(localStorage.getItem(LIBKEY)||'null'); const list = raw && Array.isArray(raw.songs) ? raw.songs : [];
+    return list.map(x=>{ try{ return normalize(x); }catch(e){ return null; } }).filter(Boolean); }catch(e){ return []; }
+}
+function renderImportBanner(){
+  const el = $('#importBanner'); const n = CLOUD && user ? localSongs().length : 0;
+  el.innerHTML = n ? `<div class="banner"><span><b>${n} song${n>1?'s':''} saved on this computer</b> from before accounts were added.</span>
+    <button class="primary" id="importLocal">Move them into my account</button><button id="ignoreLocal">Not mine, hide this</button></div>` : '';
+}
+$('#importBanner').addEventListener('click', e=>{
+  if(e.target.id==='importLocal'){ const list = localSongs(); list.forEach(p=>{ if(lib.songs.some(x=>x.id===p.id)) p.id = uid('s'); lib.songs.push(p); cloudSave(p, true); });
+    try{ localStorage.removeItem(LIBKEY); localStorage.removeItem('trackmaker.v2'); }catch(x){}
+    renderLib(); renderImportBanner(); toast(list.length+' song'+(list.length>1?'s':'')+' moved into your account.'); }
+  if(e.target.id==='ignoreLocal'){ try{ localStorage.setItem('trackmaker.ignoreLocal.'+user.uid,'1'); }catch(x){} renderImportBanner(); }
+});
+async function startCloud(){
+  showAuth(true); authMsg('Connecting…', true);
+  try{ const base = 'https://cdn.jsdelivr.net/npm/firebase@10.12.2/';
+    await loadScript(base+'firebase-app-compat.js'); await Promise.all([loadScript(base+'firebase-auth-compat.js'), loadScript(base+'firebase-firestore-compat.js')]);
+    firebase.initializeApp(FIREBASE_CONFIG); fbAuth = firebase.auth(); fbDb = firebase.firestore(); authMsg('');
+    fbAuth.onAuthStateChanged(onUser);
+  }catch(err){ authMsg('Could not connect to the sign-in service. Check your internet connection and reload the page.'); }
+}
+
 /* ---------- start ---------- */
 (function init(){
+  try{ if(localStorage.getItem('trackmaker.band')==='0') $('#bandTgl').checked = false; }catch(e){}
+  if(CLOUD){ project = emptyProject('birthday'); lib = {cur:null, songs:[project]}; renderCreate(); requestAnimationFrame(frame); startCloud();
+    try{ if(!localStorage.getItem('trackmaker.help')) $('#helpModal').hidden = false; }catch(e){}
+    return; }
   try{ const raw = JSON.parse(localStorage.getItem(LIBKEY)||'null'); if(raw && Array.isArray(raw.songs)) lib = {cur:raw.cur, songs:raw.songs.map(s=>{ try{ return normalize(s); }catch(e){ return null; } }).filter(Boolean)}; }catch(e){}
   if(!lib.songs.length){ // bring over the song from the previous version, if there is one
     try{ const old = JSON.parse(localStorage.getItem('trackmaker.v2')||'null'); if(old){ const p = normalize(old); lib.songs.push(p); } }catch(e){}
